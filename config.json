@@ -1,0 +1,10 @@
+{
+    "dossier_jeu": "",
+    "model_path": "virusf/nllb-renpy-rory-v3",
+    "dossier_sortie": "",
+    "recursif": true,
+    "src_lang": "auto",
+    "tgt_lang": "fra_Latn",
+    "autodetect_src": true,
+    "grammar_fr": false
+}
