@@ -81,7 +81,7 @@ Lancement.bat
 
 ## 📜 Licence
 Ce projet est distribué sous licence
-\n**Creative Commons Attribution - NonCommercial 4.0 International (CC BY-NC 4.0)**.  
+**Creative Commons Attribution - NonCommercial 4.0 International (CC BY-NC 4.0)**.  
 
 👉 Vous êtes libres de l’utiliser, le modifier et le partager, tant que :  
 - vous citez l’auteur original,  
