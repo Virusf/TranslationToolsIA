@@ -7,21 +7,6 @@ La compatibilité complète sera disponible dès la prochaine version de cet out
 
 ---
 
-## ✨ Fonctionnalités
-- Interface graphique simple (**Tkinter**).
-- Traduction **en place** ou vers un **dossier de sortie**.
-- **Backup automatique** des fichiers originaux (`.backup`).
-- Support **récursif** des sous-dossiers.
-- Détection automatique de la **langue source** (optionnelle).
-- Sélection du modèle :
-  - dossier local (`./script/models/...`)  
-  - ou repo Hugging Face (`virusf/nllb-renpy-rory-v3` par défaut).
-- Gestion VRAM optimisée (FP16, TF32, batch adaptatif).
-- Protection des **tokens Ren'Py** (`RENPY_CODE_...`, `{color=}`, `{size=}`, etc.).
-- Sauvegarde automatique des préférences dans `config.json`.
-
----
-
 ## 📦 Installation
 
 ### Prérequis
@@ -48,6 +33,20 @@ lance simplement : Lancement.bat
 5. Cliquer sur **Start translation** pour lancer.  
 
 
+---
+
+## ✨ Fonctionnalités
+- Interface graphique simple (**Tkinter**).
+- Traduction **en place** ou vers un **dossier de sortie**.
+- **Backup automatique** des fichiers originaux (`.backup`).
+- Support **récursif** des sous-dossiers.
+- Détection automatique de la **langue source** (optionnelle).
+- Sélection du modèle :
+  - dossier local (`./script/models/...`)  
+  - ou repo Hugging Face (`virusf/nllb-renpy-rory-v3` par défaut).
+- Gestion VRAM optimisée (FP16, TF32, batch adaptatif).
+- Protection des **tokens Ren'Py** (`RENPY_CODE_...`, `{color=}`, `{size=}`, etc.).
+- Sauvegarde automatique des préférences dans `config.json`.
 
 ---
 
