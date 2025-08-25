@@ -23,7 +23,7 @@ import time
 import queue
 import importlib
 
-APP_TITLE = "Interface Ren'Py Translator"
+APP_TITLE = "Ren'Py Translator Interface"
 
 def _is_hf_repo_id(s: str) -> bool:
     return bool(re.match(r"^[\w.-]+/[\w.-]+$", s or ""))
@@ -63,7 +63,7 @@ class InterfaceRenPyTranslator:
     def __init__(self, root):
         self.root = root
         self.root.title(APP_TITLE)
-        self.root.geometry("650x540")
+        self.root.geometry("600x540")
         
         self.config_file = "config.json"
 
@@ -71,15 +71,50 @@ class InterfaceRenPyTranslator:
         self.batch_log_path    = tk.StringVar(value="")
         self.batch_log_clean   = tk.BooleanVar(value=False)
 
-        # Thème sombre simple
-        self.root.configure(bg="#3c3c3c")
-        self.root.option_add("*Foreground", "white")
-        self.root.option_add("*Background", "#3c3c3c")
-        self.root.option_add("*Button.Background", "#3c3f41")
-        self.root.option_add("*Button.Foreground", "white")
-        self.root.option_add("*Entry.Background", "#3c3f41")
-        self.root.option_add("*Entry.Foreground", "white")
-        self.root.option_add("*Label.Background", "#3c3c3c")
+        # --- Thème et Style ---
+        # Thème sombre à fort contraste pour une meilleure accessibilité
+        dark_bg = "#2b2b2b"      # Fond gris très foncé
+        widget_bg = "#3c3f41"    # Fond des widgets légèrement plus clair
+        text_color = "#f0f0f0"   # Texte blanc cassé, moins agressif que le blanc pur
+        entry_bg = "#3c3f41"     # Fond des champs de saisie
+
+        self.root.configure(bg=dark_bg)
+        self.root.option_add("*Foreground", text_color)
+        self.root.option_add("*Background", dark_bg)
+        self.root.option_add("*Entry.Background", entry_bg)
+        self.root.option_add("*Entry.Foreground", text_color)
+        self.root.option_add("*Label.Background", dark_bg)
+        self.root.option_add("*Checkbutton.Background", dark_bg)
+        self.root.option_add("*Checkbutton.foreground", text_color)
+
+        # Style pour les boutons sur le thème sombre
+        self.button_style = {
+            'background': '#58c1fe',   
+            'foreground': 'black',       
+            'activebackground': '#58a3fe', 
+            'activeforeground': 'white',
+            'padx': 5,
+            'pady': 4
+        }
+
+        self.button_style_s = {
+            'background': '#32d10a',      
+            'foreground': 'black',   
+            'activebackground': '#009700',
+            'activeforeground': 'white',
+            'padx': 5,
+            'pady': 4
+        }
+
+        self.button_style_c = {
+            'background': '#ffd23d',
+            'foreground': 'black',
+            'activebackground': '#ddd23d', 
+            'activeforeground': 'black',
+            'padx': 5,
+            'pady': 4
+        }
+        # --- Fin du Thème et Style ---
 
         # State
         self.dossier_jeu = tk.StringVar()
@@ -104,7 +139,7 @@ class InterfaceRenPyTranslator:
         self.load_settings()
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
         
-        self.log("Sélectionne le dossier puis clique sur 'Lancer la traduction'.")
+        self.log("Select the folder then click on 'Start translation'.")
 
     def get_default_model_path(self):
         """
@@ -138,7 +173,7 @@ class InterfaceRenPyTranslator:
     def save_settings(self):
         """Sauvegarde les paramètres actuels dans un fichier JSON."""
         settings = {
-            "dossier_jeu": self.dossier_jeu.get(),
+            "dossier_jeu": "",
             "model_path": self.model_path.get(),
             "dossier_sortie": self.dossier_sortie.get(),
             "recursif": self.recursif.get(),
@@ -180,9 +215,9 @@ class InterfaceRenPyTranslator:
             # Mettre à jour l'état de l'interface après le chargement
             self._toggle_src_field()
 
-            self.log("⚙️ Paramètres chargés.")
+            self.log("⚙️ Settings loaded.")
         except Exception as e:
-            self.log(f"⚠️ Fichier de configuration corrompu ou illisible : {e}")
+            self.log(f"⚠️ Config file corrupted or unreadable: {e}")
 
     def on_closing(self):
         """Appelée lorsque l'utilisateur ferme la fenêtre."""
@@ -193,48 +228,48 @@ class InterfaceRenPyTranslator:
         # 1) Dossier des fichiers à traduire
         frame_game = tk.Frame(self.root)
         frame_game.pack(fill="x", padx=10, pady=(8, 2))
-        tk.Label(frame_game, text="Dossier des fichiers à traduire :").pack(side="left")
+        tk.Label(frame_game, text="Folder of files to translate :").pack(side="left")
         tk.Entry(frame_game, textvariable=self.dossier_jeu, width=60).pack(side="left", padx=5)
-        tk.Button(frame_game, text="Parcourir", command=self.choisir_dossier_jeu).pack(side="left")
+        tk.Button(frame_game, text="Browse", command=self.choisir_dossier_jeu, **self.button_style).pack(side="left")
 
         # 2) Parcourir récursivement les sous-dossiers
         frame_opts = tk.Frame(self.root)
         frame_opts.pack(fill="x", padx=10, pady=(2, 2))
-        tk.Checkbutton(frame_opts, text="Parcourir récursivement les sous-dossiers", variable=self.recursif).pack(anchor="w")
+        tk.Checkbutton(frame_opts, text="Browse subfolders recursively", variable=self.recursif).pack(anchor="w")
 
         # 4) Chemin du modèle
         frame_model = tk.Frame(self.root)
         frame_model.pack(fill="x", padx=10, pady=5)
-        tk.Label(frame_model, text="Chemin du modèle :").pack(side="left")
-        tk.Entry(frame_model, textvariable=self.model_path, width=65).pack(side="left", padx=5)
-        tk.Button(frame_model, text="Parcourir", command=self.choisir_modele).pack(side="left")
+        tk.Label(frame_model, text="Model path :").pack(side="left")
+        tk.Entry(frame_model, textvariable=self.model_path, width=72).pack(side="left", padx=5)
+        tk.Button(frame_model, text="Browse", command=self.choisir_modele, **self.button_style).pack(side="left")
 
         # 5) Langues (avec autodétection + ligne source/cible)
         frame_lang = tk.Frame(self.root)
         frame_lang.pack(fill="x", padx=10, pady=5)
         tk.Checkbutton(
             frame_lang,
-            text="Détecter automatiquement la langue source",
+            text="Automatically detect source language",
             variable=self.autodetect_src,
             command=self._toggle_src_field
         ).pack(anchor="w")
         line2 = tk.Frame(frame_lang)
         line2.pack(fill="x", pady=(6, 0))
 
-        tk.Label(line2, text="Langue source (code NLLB) :").pack(side="left")
+        tk.Label(line2, text="Source language (NLLB code) :").pack(side="left")
         self.src_entry = tk.Entry(
             line2, textvariable=self.src_lang, width=12,
             state="disabled" if self.autodetect_src.get() else "normal"
         )
         self.src_entry.pack(side="left", padx=5)
-        tk.Label(line2, text="→ Cible :").pack(side="left", padx=10)
+        tk.Label(line2, text="→ Target :").pack(side="left", padx=10)
         tk.Entry(line2, textvariable=self.tgt_lang, width=12).pack(side="left", padx=5)
 
         # 6) Actions
         frame_actions = tk.Frame(self.root)
         frame_actions.pack(fill="x", padx=10, pady=8)
-        tk.Button(frame_actions, text="Lancer la traduction", command=self.lancer_traduction).pack(side="left")
-        tk.Button(frame_actions, text="Effacer le log", command=self.clear_log).pack(side="left", padx=10)
+        tk.Button(frame_actions, text="Start translation", command=self.lancer_traduction, **self.button_style_s).pack(side="left")
+        tk.Button(frame_actions, text="Clear log", command=self.clear_log, **self.button_style_c).pack(side="left", padx=10)
 
         # 7) Log
         self.logbox = scrolledtext.ScrolledText(self.root, height=22, wrap="word", font=("Consolas", 10))
@@ -339,21 +374,21 @@ class InterfaceRenPyTranslator:
         sys.stderr = _TeeStream(self._old_err, ui_writer)
 
         try:
-            print(f"📁 Dossier : {chemin}")
-            print(f"🧠 Modèle : {modele}")
-            print(f"🌐 Langues : {src_lang} → {tgt_lang}")
-            print("📂 Mode :", "Récursif" if recurse else "Ce dossier seulement")
+            print(f"📁 Folder : {chemin}")
+            print(f"🧠 Model : {modele}")
+            print(f"🌐 Languages : {src_lang} → {tgt_lang}")
+            print("📂 Mode :", "Recursive" if recurse else "This folder only")
             if sortie:
-                print(f"📤 Dossier de sortie : {sortie}")
+                print(f"📤 Output folder : {sortie}")
             else:
-                print("✍️ Écrasement des fichiers (backup auto .backup)")
+                print("✍️ Overwriting files (auto backup .backup)")
 
             rpy_files = self._collect_rpy_files(chemin, recursive=recurse)
             if not rpy_files:
-                print("ℹ️ Aucun fichier .rpy/.txt trouvé.")
+                print("ℹ️ No .rpy/.txt files found.")
                 return
 
-            print(f"🔎 Fichiers trouvés : {len(rpy_files)}")
+            print(f"🔎 Files found : {len(rpy_files)}")
 
             try:
                 mod = importlib.import_module('traducteur_renpy_wrapper')
@@ -439,7 +474,8 @@ class InterfaceRenPyTranslator:
                         if not os.path.exists(backup_path):
                             try: shutil.copy2(src, backup_path)
                             except Exception as e: print(f"⚠️ Backup raté pour {rel} : {e}")
-                        print(f"✏️  [{idx}/{len(rpy_files)}] Écrase : {rel} (backup: {os.path.basename(backup_path)})")
+                        print(f"✏️  [{idx}/{len(rpy_files)}] Écrase : {rel}")
+                        print(f"✏️  (backup: {os.path.basename(backup_path)})")
                         translate_file(src, src)
                     print(f"✅ Fini : {rel}")
                     ok += 1
