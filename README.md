@@ -2,7 +2,7 @@
 
 Un outil pour **traduire automatiquement les fichiers `.txt` des jeux Ren'Py**, basé sur [NLLB (No Language Left Behind)](https://huggingface.co/facebook/nllb-200-distilled-600M) et Hugging Face Transformers.  
 
-⚠️ Ce traducteur est conçu pour fonctionner sur les fichiers générés par l’application [rory_tool](https://github.com/Rory-Mercury-91/rory_tool).  
+⚠️ Ce traducteur est conçu pour fonctionner sur les fichiers générés par l’application [Rory-RenExtract](https://github.com/Rory-Mercury-91/rory_tool).  
 La compatibilité complète sera disponible dès la prochaine version de cet outil.
 
 ---
