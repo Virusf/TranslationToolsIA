@@ -30,18 +30,14 @@ La compatibilité complète sera disponible dès la prochaine version de cet out
 - Min 6 Go Vram
 
 ### Installation rapide (Windows)
-lance simplement :
-
-Install Requirements.bat
+lance simplement : Install Requirements.bat
 
 Cela installera automatiquement toutes les dépendances nécessaires (`torch`, `transformers`, etc.).
 
 ## 🚀 Utilisation
 
 ### Interface graphique (Windows)
-lance simplement :
-
-Lancement.bat
+lance simplement : Lancement.bat
 
 1. **Folder of files to translate** → choisir le dossier du jeu Ren’Py.  
 2. **Browse subfolders recursively** → cocher si tu veux inclure aussi les sous-dossiers.  
