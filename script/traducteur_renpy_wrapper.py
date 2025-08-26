@@ -289,6 +289,61 @@ class TraducteurRenPy(CoreTraducteur):
                 out_body = "".join(rebuilt)
 
 
+            # (d) Restaure la ponctuation perdue après éléments protégés si le backup l'avait
+            PUNCT = r"[,:;.!?…]"
+
+            # 1) Après variables [nom]
+            for m in re.finditer(r"(\[[^\[\]\s]+\])\s*(" + PUNCT + r")", bak_body):
+                base, punct = m.group(1), m.group(2)
+                # si la sortie n'a pas déjà cette ponctuation juste après, on l'insère + espace
+                out_body = re.sub(
+                    r"(" + re.escape(base) + r")\s*(?!"+re.escape(punct)+r")",
+                    r"\1" + punct + " ",
+                    out_body,
+                    count=1
+                )
+                # normalise espace après la ponctuation
+                out_body = re.sub(
+                    r"(" + re.escape(base + punct) + r")\s*",
+                    r"\1 ",
+                    out_body,
+                    count=1
+                )
+
+            # 2) Après tokens RENPY_XXX
+            for m in re.finditer(r"(RENPY_[A-Z]+(?:_?[0-9]+)?)\s*(" + PUNCT + r")", bak_body):
+                base, punct = m.group(1), m.group(2)
+                out_body = re.sub(
+                    r"(" + re.escape(base) + r")\s*(?!"+re.escape(punct)+r")",
+                    r"\1" + punct + " ",
+                    out_body,
+                    count=1
+                )
+                out_body = re.sub(
+                    r"(" + re.escape(base + punct) + r")\s*",
+                    r"\1 ",
+                    out_body,
+                    count=1
+                )
+
+            # 3) Après balises fermantes {/xxx}
+            for m in re.finditer(r"(\{/[A-Za-z_]+\})\s*(" + PUNCT + r")", bak_body):
+                base, punct = m.group(1), m.group(2)
+                out_body = re.sub(
+                    r"(" + re.escape(base) + r")\s*(?!"+re.escape(punct)+r")",
+                    r"\1" + punct + " ",
+                    out_body,
+                    count=1
+                )
+                out_body = re.sub(
+                    r"(" + re.escape(base + punct) + r")\s*",
+                    r"\1 ",
+                    out_body,
+                    count=1
+                )
+
+
+
             # ré-écrire la ligne
             fixed.append(out_body + newline)
 
@@ -425,7 +480,8 @@ class TraducteurRenPy(CoreTraducteur):
                         core_out = " ".join(self._normalize_list(results_text[text_idx:text_idx+nb]))
                         text_idx += nb
                     else:
-                        core_out = ""
+                        # ⬅️ SEGMENT NON TRADUIT (pas de lettres) : on garde le texte original tel quel
+                        core_out = core
                     core_out = core_out.strip()
                     core_out = self._enforce_leading_dash_if_in_source(core, core_out)
                     rebuilt_parts.append(lws + core_out + rws)
