@@ -32,6 +32,7 @@ lance simplement : Lancement.bat
    - `Target` (`fra_Latn` par défaut pour français).  
 5. Cliquer sur **Start translation** pour lancer.  
 
+⚠️ **Attention :** le démarrage de la traduction peut prendre un certain temps avant que le processus ne commence réellement (chargement du modèle et initialisation).
 
 ---
 
