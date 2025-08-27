@@ -33,6 +33,8 @@ lance simplement : Lancement.bat
 5. Cliquer sur **Start translation** pour lancer.  
 
 
+⚠️ **Attention :** le démarrage de la traduction peut prendre un certain temps avant que le processus ne commence réellement (chargement du modèle et initialisation).
+
 ---
 
 ## ✨ Fonctionnalités
@@ -78,6 +80,7 @@ lance simplement : Lancement.bat
 Ce projet est distribué sous licence
 
 **Creative Commons Attribution - NonCommercial 4.0 International (CC BY-NC 4.0)**.  
+
 
 
 👉 Vous êtes libres de l’utiliser, le modifier et le partager, tant que :  
