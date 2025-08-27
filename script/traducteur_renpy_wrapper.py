@@ -114,6 +114,8 @@ class TraducteurRenPy(CoreTraducteur):
         r"\{[a-zA-Z_]+(?:=[^}]*)?\}"
         r"|"
         r"\{/[a-zA-Z_]+\}"
+        r"|"
+        r"\[[^\]]+\]"            # ⬅️ nouvelles variables protégées: [mcname], [points], etc.
     )
 
     def _split_protected(self, text: str) -> List[Tuple[str, str]]:
@@ -246,21 +248,12 @@ class TraducteurRenPy(CoreTraducteur):
             out_body = out_line.rstrip("\r\n")
             bak_body = bak_line.rstrip("\r\n")
 
-            # (a) SPAN's -> un espace (toujours)
-            #     ex: {color=...}Sophie{/color}'s -> {color=...}Sophie{/color}␠
+            # 1) Normaliser le possessif 's → espace (span, [var], RENPY_*)
             out_body = re.sub(r"(\{[A-Za-z_]+[^}]*\}[^{}]*\{/[A-Za-z_]+\})\s*['’]s\b", r"\1 ", out_body)
+            out_body = re.sub(r"(\[[^\]]+\])\s*['’]s\b", r"\1 ", out_body)
+            out_body = re.sub(r"(RENPY_[A-Z]+(?:_?[0-9]+)?)\s*['’]s\b", r"\1 ", out_body)
 
-            # (b) TOKEN's -> on suit le backup :
-            #     si le backup contient RENPY_XXX's, alors on force "RENPY_XXX " dans la sortie
-            TOKEN_RE = r"RENPY_[A-Z]+(?:_?[0-9]+)?"
-            poss_tokens = { m.group(1) for m in re.finditer(rf"({TOKEN_RE})['’]s\b", bak_body) }
-            for tok in poss_tokens:
-                # 1) si la sortie a encore "'s", on le remplace par un espace
-                out_body = re.sub(rf"({re.escape(tok)})\s*['’]s\b", r"\1 ", out_body)
-                # 2) sinon, s'il n'y a PAS d'espace après le token et qu'un mot suit, on insère 1 espace
-                out_body = re.sub(rf"({re.escape(tok)})(?!\s)(?=[A-Za-zÀ-ÖØ-öø-ÿ])", r"\1 ", out_body)
-
-            # (c) Espaces entre tokens calqués sur le backup, SANS jamais supprimer du texte (ex: 'Sophie','Helen')
+            # (1a) Espaces entre tokens calqués sur le backup, SANS jamais supprimer du texte (ex: 'Sophie','Helen')
             out_chunks, out_tokens = self._tokenize_RENPY(out_body)
             bak_chunks, bak_tokens = self._tokenize_RENPY(bak_body)
 
@@ -289,58 +282,56 @@ class TraducteurRenPy(CoreTraducteur):
                 out_body = "".join(rebuilt)
 
 
-            # (d) Restaure la ponctuation perdue après éléments protégés si le backup l'avait
-            PUNCT = r"[,:;.!?…]"
+            # 2) Calque EXACT des séparateurs avant/après depuis le backup (pour RENPY_* et [variables])
+            PUNCT = ",:;.!?…"
 
-            # 1) Après variables [nom]
-            for m in re.finditer(r"(\[[^\[\]\s]+\])\s*(" + PUNCT + r")", bak_body):
-                base, punct = m.group(1), m.group(2)
-                # si la sortie n'a pas déjà cette ponctuation juste après, on l'insère + espace
-                out_body = re.sub(
-                    r"(" + re.escape(base) + r")\s*(?!"+re.escape(punct)+r")",
-                    r"\1" + punct + " ",
-                    out_body,
-                    count=1
-                )
-                # normalise espace après la ponctuation
-                out_body = re.sub(
-                    r"(" + re.escape(base + punct) + r")\s*",
-                    r"\1 ",
-                    out_body,
-                    count=1
-                )
+            def _desired_around(body, s, e):
+                prev_ch = body[s-1] if s > 0 else ""
+                next_ch = body[e] if e < len(body) else ""
+                next2_ch = body[e+1] if e+1 < len(body) else ""
+                # after
+                if next_ch in PUNCT:
+                    after = next_ch + (" " if next2_ch.isspace() else "")
+                elif next_ch.isspace():
+                    after = " "
+                else:
+                    after = ""
+                # before
+                if prev_ch in PUNCT:
+                    prev2_ch = body[s-2] if s-2 >= 0 else ""
+                    before = prev_ch + (" " if prev2_ch.isspace() else "")
+                elif prev_ch.isspace():
+                    before = " "
+                else:
+                    before = ""
+                return before, after
 
-            # 2) Après tokens RENPY_XXX
-            for m in re.finditer(r"(RENPY_[A-Z]+(?:_?[0-9]+)?)\s*(" + PUNCT + r")", bak_body):
-                base, punct = m.group(1), m.group(2)
-                out_body = re.sub(
-                    r"(" + re.escape(base) + r")\s*(?!"+re.escape(punct)+r")",
-                    r"\1" + punct + " ",
-                    out_body,
-                    count=1
-                )
-                out_body = re.sub(
-                    r"(" + re.escape(base + punct) + r")\s*",
-                    r"\1 ",
-                    out_body,
-                    count=1
-                )
+            def _apply_around(out_text, token, before, after):
+                # côté droit
+                pattern_after = r"(" + re.escape(token) + r")(?P<junk>(?:\s|[" + re.escape(PUNCT) + r"]){0,2})"
+                out_text = re.sub(pattern_after, r"\1" + after, out_text, count=1)
+                # côté gauche
+                pattern_before = r"(?:(?<=^)|(?<=[^\wÀ-ÖØ-öø-ÿ}]))(?P<junk>(?:\s|[" + re.escape(PUNCT) + r"]){0,2})(" + re.escape(token) + r")"
+                out_text = re.sub(pattern_before, before + r"\2", out_text, count=1)
+                return out_text
 
-            # 3) Après balises fermantes {/xxx}
-            for m in re.finditer(r"(\{/[A-Za-z_]+\})\s*(" + PUNCT + r")", bak_body):
+            # Appliquer aux RENPY_*
+            for m in re.finditer(r"(RENPY_[A-Z]+(?:_?[0-9]+)?)", bak_body):
+                tok = m.group(1); s, e = m.start(1), m.end(1)
+                before, after = _desired_around(bak_body, s, e)
+                out_body = _apply_around(out_body, tok, before, after)
+
+            # Appliquer aux [variables]
+            for m in re.finditer(r"(\[[^\]]+\])", bak_body):
+                tok = m.group(1); s, e = m.start(1), m.end(1)
+                before, after = _desired_around(bak_body, s, e)
+                out_body = _apply_around(out_body, tok, before, after)
+
+            # 3) (optionnel) Restaurer la ponctuation après balises fermantes selon le backup
+            for m in re.finditer(r"(\{/[A-Za-z_]+\})\s*([" + re.escape(PUNCT) + r"])", bak_body):
                 base, punct = m.group(1), m.group(2)
-                out_body = re.sub(
-                    r"(" + re.escape(base) + r")\s*(?!"+re.escape(punct)+r")",
-                    r"\1" + punct + " ",
-                    out_body,
-                    count=1
-                )
-                out_body = re.sub(
-                    r"(" + re.escape(base + punct) + r")\s*",
-                    r"\1 ",
-                    out_body,
-                    count=1
-                )
+                out_body = re.sub(r"(" + re.escape(base) + r")\s*(?!"+re.escape(punct)+r")", r"\1" + punct + " ", out_body)
+                out_body = re.sub(r"(" + re.escape(base + punct) + r")\s*", r"\1 ", out_body)
 
 
 
