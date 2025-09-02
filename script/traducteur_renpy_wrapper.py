@@ -425,7 +425,7 @@ class TraducteurRenPy(CoreTraducteur):
             for si, seg in enumerate(segs):
                 if seg[0] == "text":
                     _, core, lws, rws = seg
-                    has_letters = bool(re.search(r'[A-Za-zÀ-ÖØ-öø-ÿ]', core))
+                    has_letters = any(ch.isalpha() for ch in core)
                     if core.strip() and has_letters:
                         chs = self._split_text_to_safe_chunks(core)
                         text_chunks.extend(chs)
@@ -445,7 +445,7 @@ class TraducteurRenPy(CoreTraducteur):
             for s in segs:
                 if s[0] == "text":
                     core = s[1]
-                    if core.strip() and re.search(r'[A-Za-zÀ-ÖØ-öø-ÿ]', core):
+                    if core.strip() and any(ch.isalpha() for ch in core):
                         c += len(self._split_text_to_safe_chunks(core))
             return c
 

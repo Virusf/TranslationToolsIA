@@ -23,6 +23,20 @@ warnings.filterwarnings(
 import torch
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
+
+# --- Langdetect (auto-install soft) ---
+try:
+    from langdetect import detect, detect_langs
+except Exception:
+    try:
+        import subprocess, sys as _sys
+        subprocess.check_call([_sys.executable, "-m", "pip", "install", "langdetect"])
+        from langdetect import detect, detect_langs
+    except Exception:
+        detect = None
+        detect_langs = None
+
+
 CONFIG = {
     "BATCH_SIZE": 64,
     "MIN_BATCH": 4,
@@ -31,6 +45,104 @@ CONFIG = {
     "VRAM_HEADROOM_GB": 2.0,   # marge VRAM stricte
     "NUM_BEAMS": 3,            # vitesse
 }
+
+
+# ISO -> NLLB
+ISO2NLLB = {
+    # --- Européennes ---
+    "en": "eng_Latn",
+    "fr": "fra_Latn",
+    "es": "spa_Latn",
+    "de": "deu_Latn",
+    "it": "ita_Latn",
+    "pt": "por_Latn",
+    "pt-br": "por_Latn",
+    "nl": "nld_Latn",
+    "af": "afr_Latn",
+    "sv": "swe_Latn",
+    "da": "dan_Latn",
+    "no": "nob_Latn",
+    "fi": "fin_Latn",
+    "is": "isl_Latn",
+    "pl": "pol_Latn",
+    "cs": "ces_Latn",
+    "sk": "slk_Latn",
+    "sl": "slv_Latn",
+    "hr": "hrv_Latn",
+    "sr": "srp_Cyrl",
+    "bs": "bos_Latn",
+    "mk": "mkd_Cyrl",
+    "bg": "bul_Cyrl",
+    "ro": "ron_Latn",
+    "hu": "hun_Latn",
+    "el": "ell_Grek",
+    "et": "est_Latn",
+    "lv": "lav_Latn",
+    "lt": "lit_Latn",
+    "uk": "ukr_Cyrl",
+    "ru": "rus_Cyrl",
+
+    # --- Moyen-Orient ---
+    "tr": "tur_Latn",
+    "az": "azj_Latn",
+    "hy": "hye_Armn",
+    "ka": "kat_Geor",
+    "fa": "pes_Arab",
+    "ar": "arb_Arab",
+    "he": "heb_Hebr",
+    "ku": "kmr_Latn",
+
+    # --- Asie du Sud ---
+    "hi": "hin_Deva",
+    "bn": "ben_Beng",
+    "ur": "urd_Arab",
+    "pa": "pan_Guru",
+    "gu": "guj_Gujr",
+    "ml": "mal_Mlym",
+    "ta": "tam_Taml",
+    "te": "tel_Telu",
+    "kn": "kan_Knda",
+    "si": "sin_Sinh",
+    "ne": "npi_Deva",
+
+    # --- Asie du Sud-Est ---
+    "id": "ind_Latn",
+    "ms": "zsm_Latn",
+    "jv": "jav_Latn",
+    "su": "sun_Latn",
+    "th": "tha_Thai",
+    "km": "khm_Khmr",
+    "lo": "lao_Laoo",
+    "my": "mya_Mymr",
+    "vi": "vie_Latn",
+    "tl": "tgl_Latn",
+
+    # --- Asie de l'Est ---
+    "zh": "zho_Hans",     # défaut simplifié
+    "zh-cn": "zho_Hans",
+    "zh-tw": "zho_Hant",
+    "ja": "jpn_Jpan",
+    "ko": "kor_Hang",
+    "mn": "khk_Cyrl",
+
+    # --- Afrique ---
+    "sw": "swh_Latn",
+    "am": "amh_Ethi",
+    "so": "som_Latn",
+    "yo": "yor_Latn",
+    "ig": "ibo_Latn",
+    "ha": "hau_Latn",
+    "zu": "zul_Latn",
+    "xh": "xho_Latn",
+    "st": "sot_Latn",
+
+    # --- Autres ---
+    "eo": "epo_Latn",
+    "la": "lat_Latn",
+}
+
+
+
 
 def _try(x, fn, default=None):
     try:
@@ -53,20 +165,32 @@ class TraducteurRenPy:
         except Exception:
             pass
 
+
         self.src_lang = src_lang
         self.tgt_lang = tgt_lang
 
-        print("🚀 Chargement du modèle (perf) ...")
+        print("🚀 Chargement du modèle (perf) ...", flush=True)
+        t_load0 = time.time()
+        print("   ⏳ Préparation (détection repo/local)...", flush=True)
         is_repo = isinstance(model_path, str) and re.match(r"^[\w.-]+/[\w.-]+$", model_path or "")
+        print(f"   📦 Source: {'HuggingFace' if is_repo else 'Local files'}", flush=True)
+        print("   ⏳ Téléchargement/lecture du modèle...", flush=True)
         self.model = AutoModelForSeq2SeqLM.from_pretrained(model_path, local_files_only=not is_repo)
+        print(f"   ✅ Modèle chargé ({time.time()-t_load0:.1f}s)", flush=True)
+
+        print("   ⏳ Chargement du tokenizer (rapide si déjà en cache)...", flush=True)
         try:
+            t_tok = time.time()
             self.tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True, local_files_only=not is_repo)
+            print(f"   ✅ Tokenizer prêt ({time.time()-t_tok:.1f}s, fast=True)", flush=True)
         except Exception:
+            t_tok = time.time()
             self.tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False, local_files_only=not is_repo)
+            print(f"   ✅ Tokenizer prêt ({time.time()-t_tok:.1f}s, fast=False)", flush=True)
 
         if torch.cuda.is_available():
+            print("   🎮 Passage sur GPU + FP16 ...", flush=True)
             self.device = "cuda"
-            # FP16
             try:
                 self.model = self.model.to(dtype=torch.float16)
             except Exception:
@@ -76,10 +200,14 @@ class TraducteurRenPy:
             print(f"🎮 GPU: VRAM totale ~ {vram_total:.1f} GB")
             self._vram_total = float(vram_total)
         else:
+            print("   ⚙️ Mode CPU (plus lent)", flush=True)
             self.device = "cpu"
             self.model = self.model.eval()
             self._vram_total = None
-        print("✅ Modèle prêt!")
+
+        print("✅ Modèle prêt!", flush=True)
+        
+
 
         # langues
         if hasattr(self.tokenizer, "src_lang") and self.src_lang != "auto":
@@ -274,16 +402,63 @@ class TraducteurRenPy:
                         break
         return " ".join(buf)
 
+
     def _ensure_src_lang_from_sample(self, lines: List[str]):
-        if self.src_lang != "auto": return
-        sample = self._extract_dialog_bits(lines, max_chars=3000).lower()
-        iso = "en"
-        if any(w in sample for w in [" le ", " la ", " et ", " je ", " tu "]): iso = "fr"
-        nllb = {"en":"eng_Latn","fr":"fra_Latn"}.get(iso, "eng_Latn")
+        """
+        Détecte la langue majoritaire du fichier (fenêtrage + vote) avec langdetect.
+        Si indisponible/échec -> fallback FR/EN simplifié.
+        """
+        if self.src_lang != "auto":
+            # Forcée par l'UI → on respecte.
+            try:
+                if hasattr(self.tokenizer, "src_lang"):
+                    self.tokenizer.src_lang = self.src_lang
+            except Exception:
+                pass
+            return
+
+        # 1) Construire un gros échantillon textuel à partir des dialogues
+        sample = self._extract_dialog_bits(lines, max_chars=20000)
+        sample_low = sample.lower()
+
+        detected_iso = None
+
+        # 2) Détection robuste (fenêtres) si langdetect dispo
+        if detect and detect_langs:
+            # Fenêtrage pour votes majoritaires (plus fiable sur fichiers hétérogènes)
+            window = 800
+            step = 800
+            votes = {}
+            for i in range(0, len(sample), step):
+                chunk = sample[i:i+window].strip()
+                if len(chunk) < 30:
+                    continue
+                try:
+                    # detect_langs → "xx:prob,yy:prob..."
+                    langs = detect_langs(chunk)
+                    if langs:
+                        top = sorted(langs, key=lambda x: x.prob, reverse=True)[0]
+                        iso = top.lang.lower()
+                        votes[iso] = votes.get(iso, 0) + 1
+                except Exception:
+                    continue
+
+            if votes:
+                detected_iso = max(votes.items(), key=lambda kv: kv[1])[0]
+
+        # 3) Fallback simple FR/EN si rien détecté
+        if not detected_iso:
+            iso = "en"
+            if any(w in sample_low for w in [" le ", " la ", " et ", " je ", " tu "]):
+                iso = "fr"
+            detected_iso = iso
+
+        # 4) Mapping ISO -> NLLB (avec défaut anglais)
+        nllb = ISO2NLLB.get(detected_iso, "eng_Latn")
         self.src_lang = nllb
         try:
             if hasattr(self.tokenizer, "src_lang"):
                 self.tokenizer.src_lang = nllb
         except Exception:
             pass
-        print(f"🧭 Langue source détectée: {iso} → {nllb}")
+        print(f"🧭 Langue source détectée (majoritaire): {detected_iso} → {nllb}")

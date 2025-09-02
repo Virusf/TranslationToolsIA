@@ -25,6 +25,43 @@ import importlib
 
 APP_TITLE = "Ren'Py Translator Interface"
 
+# Codes NLLB usuels → Libellés lisibles
+NLLB_CODES = {
+    # Europe (latin)
+    "eng_Latn":"English", "fra_Latn":"Français", "spa_Latn":"Español", "por_Latn":"Português",
+    "deu_Latn":"Deutsch", "ita_Latn":"Italiano", "nld_Latn":"Nederlands",
+    "swe_Latn":"Svenska", "dan_Latn":"Dansk", "fin_Latn":"Suomi", "isl_Latn":"Íslenska",
+    "pol_Latn":"Polski", "ces_Latn":"Čeština", "slk_Latn":"Slovenčina",
+    "slv_Latn":"Slovenščina", "hrv_Latn":"Hrvatski", "bos_Latn":"Bosanski",
+    "ron_Latn":"Română", "hun_Latn":"Magyar", "est_Latn":"Eesti", "lav_Latn":"Latviešu",
+    "lit_Latn":"Lietuvių",
+    # Europe (autres scripts)
+    "ell_Grek":"Ελληνικά",
+    "rus_Cyrl":"Русский", "ukr_Cyrl":"Українська", "bul_Cyrl":"Български", "mkd_Cyrl":"Македонски",
+    "srp_Cyrl":"Српски",
+    # Moyen-Orient
+    "tur_Latn":"Türkçe", "azj_Latn":"Azərbaycanca", "hye_Armn":"Հայերեն", "kat_Geor":"ქართული",
+    "arb_Arab":"العربية", "pes_Arab":"فارسی", "heb_Hebr":"עברית", "kmr_Latn":"Kurdî (Kurmanji)",
+    # Asie du Sud
+    "hin_Deva":"हिन्दी", "ben_Beng":"বাংলা", "urd_Arab":"اردو", "pan_Guru":"ਪੰਜਾਬੀ",
+    "guj_Gujr":"ગુજરાતી", "mal_Mlym":"മലയാളം", "tam_Taml":"தமிழ்", "tel_Telu":"తెలుగు",
+    "kan_Knda":"ಕನ್ನಡ", "sin_Sinh":"සිංහල", "npi_Deva":"नेपाली",
+    # Asie du Sud-Est
+    "ind_Latn":"Bahasa Indonesia", "zsm_Latn":"Bahasa Melayu", "jav_Latn":"Basa Jawa",
+    "sun_Latn":"Basa Sunda", "tha_Thai":"ไทย", "khm_Khmr":"ខ្មែរ", "lao_Laoo":"ລາວ",
+    "mya_Mymr":"မြန်မာ", "vie_Latn":"Tiếng Việt", "tgl_Latn":"Tagalog",
+    # Asie de l’Est
+    "zho_Hans":"中文（简体）", "zho_Hant":"中文（繁體）", "jpn_Jpan":"日本語", "kor_Hang":"한국어",
+    "khk_Cyrl":"Монгол",
+    # Afrique
+    "swh_Latn":"Kiswahili", "amh_Ethi":"አማርኛ", "som_Latn":"Af-Soomaali",
+    "yor_Latn":"Yorùbá", "ibo_Latn":"Asụsụ Igbo", "hau_Latn":"Hausa",
+    "zul_Latn":"isiZulu", "xho_Latn":"isiXhosa", "sot_Latn":"Sesotho",
+    # Divers
+    "epo_Latn":"Esperanto", "lat_Latn":"Latina",
+}
+
+
 def _is_hf_repo_id(s: str) -> bool:
     return bool(re.match(r"^[\w.-]+/[\w.-]+$", s or ""))
 
@@ -265,6 +302,11 @@ class InterfaceRenPyTranslator:
         tk.Label(line2, text="→ Target :").pack(side="left", padx=10)
         tk.Entry(line2, textvariable=self.tgt_lang, width=12).pack(side="left", padx=5)
 
+
+        # bouton aide NLLB
+        tk.Button(frame_lang, text="NLLB codes", command=self._show_nllb_codes, **self.button_style).pack(anchor="w", pady=(6,0))
+
+
         # 6) Actions
         frame_actions = tk.Frame(self.root)
         frame_actions.pack(fill="x", padx=10, pady=8)
@@ -274,6 +316,99 @@ class InterfaceRenPyTranslator:
         # 7) Log
         self.logbox = scrolledtext.ScrolledText(self.root, height=22, wrap="word", font=("Consolas", 10))
         self.logbox.pack(fill="both", expand=True, padx=10, pady=10)
+
+
+    # ---- Fenêtre d’aide NLLB ----
+    def _show_nllb_codes(self):
+        win = tk.Toplevel(self.root)
+        win.title("NLLB language codes")
+        win.geometry("520x640")
+        # thème sombre minimal
+        bg = "#2b2b2b"; fg = "#f0f0f0"; boxbg = "#3c3f41"
+        for w in (win,):
+            w.configure(bg=bg)
+
+        # Barre de recherche
+        frm_top = tk.Frame(win, bg=bg)
+        frm_top.pack(fill="x", padx=10, pady=(10,6))
+        tk.Label(frm_top, text="Search:", bg=bg, fg=fg).pack(side="left")
+        q = tk.StringVar()
+        ent = tk.Entry(frm_top, textvariable=q, width=32, bg=boxbg, fg=fg, insertbackground=fg)
+        ent.pack(side="left", padx=8)
+
+        # Liste + scrollbar
+        frm_mid = tk.Frame(win, bg=bg)
+        frm_mid.pack(fill="both", expand=True, padx=10, pady=6)
+        sb = tk.Scrollbar(frm_mid)
+        lb = tk.Listbox(frm_mid, height=24, activestyle="dotbox")
+        sb.pack(side="right", fill="y")
+        lb.pack(side="left", fill="both", expand=True)
+        lb.config(bg=boxbg, fg=fg, selectbackground="#58c1fe", selectforeground="black")
+        lb.config(yscrollcommand=sb.set); sb.config(command=lb.yview)
+
+        # Remplissage initial (tri alpha sur libellé)
+        items = sorted([(code, NLLB_CODES[code]) for code in NLLB_CODES], key=lambda x: x[1].lower())
+        def refresh_list():
+            term = (q.get() or "").strip().lower()
+            lb.delete(0, "end")
+            for code, name in items:
+                line = f"{code}  —  {name}"
+                if not term or term in code.lower() or term in name.lower():
+                    lb.insert("end", line)
+
+        refresh_list()
+        ent.bind("<KeyRelease>", lambda e: refresh_list())
+
+        # Actions bas
+        frm_bot = tk.Frame(win, bg=bg)
+        frm_bot.pack(fill="x", padx=10, pady=(6,10))
+
+        def _selected_code():
+            sel = lb.curselection()
+            if not sel: return None
+            txt = lb.get(sel[0])
+            return txt.split("  —  ", 1)[0].strip()
+
+        def to_source():
+            code = _selected_code()
+            if code:
+                # Si l'autodetect est actif, on désactive pour pouvoir mettre la source
+                if self.autodetect_src.get():
+                    self.autodetect_src.set(False)
+                    self._toggle_src_field()
+                self.src_lang.set(code)
+
+        def to_target():
+            code = _selected_code()
+            if code:
+                self.tgt_lang.set(code)
+
+        def copy_clipboard():
+            code = _selected_code()
+            if code:
+                self.root.clipboard_clear()
+                self.root.clipboard_append(code)
+                try:
+                    self.root.update()  # pour stabiliser le presse-papiers sous Windows
+                except Exception:
+                    pass
+
+        btn_src = tk.Button(frm_bot, text="Send to Source", command=to_source,
+                            bg="#58c1fe", fg="black", activebackground="#58a3fe", activeforeground="white", padx=8, pady=4)
+        btn_tgt = tk.Button(frm_bot, text="Send to Target", command=to_target,
+                            bg="#32d10a", fg="black", activebackground="#009700", activeforeground="white", padx=8, pady=4)
+        btn_cp  = tk.Button(frm_bot, text="Copy code", command=copy_clipboard,
+                            bg="#ffd23d", fg="black", activebackground="#ddd23d", activeforeground="black", padx=8, pady=4)
+
+        btn_src.pack(side="left")
+        btn_tgt.pack(side="left", padx=10)
+        btn_cp.pack(side="right")
+
+        # double-clic = envoyer vers Target (pratique)
+        lb.bind("<Double-Button-1>", lambda e: to_target())
+        ent.focus_set()
+
+
 
     # ---------- Helpers ----------
     def _toggle_src_field(self):
@@ -398,15 +533,29 @@ class InterfaceRenPyTranslator:
                 TraducteurRenPy = getattr(mod, 'TraducteurRenPy')
 
             try:
-                traducteur = TraducteurRenPy(modele, src_lang=src_lang, tgt_lang=tgt_lang)
+                stop_evt = threading.Event()
+                def _hb():
+                    # Heartbeat log every 3s while the heavy init runs
+                    while not stop_evt.wait(10.0):
+                        print("   ⏳ Toujours en cours de chargement du modèle…", flush=True)
+                hb_thread = threading.Thread(target=_hb, daemon=True)
+                hb_thread.start()
                 try:
-                    setattr(traducteur, "auto_install_languagetool", False)
-                except Exception:
-                    pass
-                try:
-                    setattr(traducteur, "enable_fr_grammar", bool(self.grammar_fr.get()))
-                except Exception:
-                    pass
+                    traducteur = TraducteurRenPy(modele, src_lang=src_lang, tgt_lang=tgt_lang)
+                finally:
+                    stop_evt.set()
+                    try:
+                        hb_thread.join(timeout=0.1)
+                    except Exception:
+                        pass
+                # try:
+                #     setattr(traducteur, "auto_install_languagetool", False)
+                # except Exception:
+                #     pass
+                # try:
+                #     setattr(traducteur, "enable_fr_grammar", bool(self.grammar_fr.get()))
+                # except Exception:
+                #     pass
             except Exception as e:
                 print("❌ Échec init traducteur:", e)
                 print(traceback.format_exc())
