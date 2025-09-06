@@ -13,6 +13,7 @@ La compatibilité complète sera disponible dès la prochaine version de cet out
 - Windows 10 - 11
 - Carte Nvidia >= RTX 3060
 - Min 6 Go Vram
+- Télécharger [L'app TranslationToolsIA](https://github.com/Virusf/TranslationToolsIA/archive/refs/heads/main.zip)
 
 ### Installation rapide (Windows)
 lance simplement : Install Requirements.bat
