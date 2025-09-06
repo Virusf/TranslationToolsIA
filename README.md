@@ -5,6 +5,13 @@ Un outil pour **traduire automatiquement les fichiers `.txt` des jeux Ren'Py**, 
 ⚠️ Ce traducteur est conçu pour fonctionner sur les fichiers générés par l’application [Rory-RenExtract](https://github.com/Rory-Mercury-91/rory_tool).  
 La compatibilité complète sera disponible dès la prochaine version de cet outil.
 
+🔄 Mises à jour des modèles
+Le traducteur utilise les modèles de la série [`virusf/nllb-renpy-rory-vx`](https://huggingface.co/virusf).  
+👉 Pensez à vérifier régulièrement les **nouvelles versions** (v4, v5, …) afin de bénéficier :  
+- d’un meilleur vocabulaire sur les dialogues VN  
+- de corrections de pré-traitement (`rory_tool`)  
+- d’améliorations de qualité de traduction
+
 ---
 
 ## 📦 Installation
@@ -27,7 +34,7 @@ lance simplement : Lancement.bat
 
 1. **Folder of files to translate** → choisir le dossier du jeu Ren’Py.  
 2. **Browse subfolders recursively** → cocher si tu veux inclure aussi les sous-dossiers.  
-3. **Model path** → chemin du modèle (dossier local `./models/...` ou identifiant Hugging Face `virusf/nllb-renpy-rory-v3`).  
+3. **Model path** → chemin du modèle (dossier local `./models/...` ou identifiant Hugging Face `virusf/nllb-renpy-rory-v4`).  
 4. **Languages** → configurer :  
    - `Source language (NLLB code)` (ou laisser l’option **Automatically detect source language** activée).  
    - `Target` (`fra_Latn` par défaut pour français).  
