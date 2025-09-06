@@ -1,6 +1,6 @@
 {
     "dossier_jeu": "",
-    "model_path": "virusf/nllb-renpy-rory-v3",
+    "model_path": "virusf/nllb-renpy-rory-v4",
     "dossier_sortie": "",
     "recursif": true,
     "src_lang": "auto",

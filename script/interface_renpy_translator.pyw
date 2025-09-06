@@ -28,16 +28,23 @@ APP_TITLE = "Ren'Py Translator Interface"
 # Codes NLLB usuels → Libellés lisibles
 NLLB_CODES = {
     # Europe (latin)
-    "eng_Latn":"English", "fra_Latn":"Français", "spa_Latn":"Español", "por_Latn":"Português",
-    "deu_Latn":"Deutsch", "ita_Latn":"Italiano", "nld_Latn":"Nederlands",
-    "swe_Latn":"Svenska", "dan_Latn":"Dansk", "fin_Latn":"Suomi", "isl_Latn":"Íslenska",
+    "eng_Latn":"English", 
+    "fra_Latn":"Français", 
+    "spa_Latn":"Español",
+    "deu_Latn":"Deutsch", 
+    "ita_Latn":"Italiano", 
+    "nld_Latn":"Nederlands", 
+    "por_Latn":"Português", "swe_Latn":"Svenska", "dan_Latn":"Dansk", "fin_Latn":"Suomi", "isl_Latn":"Íslenska",
     "pol_Latn":"Polski", "ces_Latn":"Čeština", "slk_Latn":"Slovenčina",
     "slv_Latn":"Slovenščina", "hrv_Latn":"Hrvatski", "bos_Latn":"Bosanski",
     "ron_Latn":"Română", "hun_Latn":"Magyar", "est_Latn":"Eesti", "lav_Latn":"Latviešu",
     "lit_Latn":"Lietuvių",
     # Europe (autres scripts)
     "ell_Grek":"Ελληνικά",
-    "rus_Cyrl":"Русский", "ukr_Cyrl":"Українська", "bul_Cyrl":"Български", "mkd_Cyrl":"Македонски",
+    "rus_Cyrl":"Русский", 
+    "ukr_Cyrl":"Українська", 
+    "bul_Cyrl":"Български", 
+    "mkd_Cyrl":"Македонски",
     "srp_Cyrl":"Српски",
     # Moyen-Orient
     "tur_Latn":"Türkçe", "azj_Latn":"Azərbaycanca", "hye_Armn":"Հայերեն", "kat_Geor":"ქართული",
@@ -51,7 +58,10 @@ NLLB_CODES = {
     "sun_Latn":"Basa Sunda", "tha_Thai":"ไทย", "khm_Khmr":"ខ្មែរ", "lao_Laoo":"ລາວ",
     "mya_Mymr":"မြန်မာ", "vie_Latn":"Tiếng Việt", "tgl_Latn":"Tagalog",
     # Asie de l’Est
-    "zho_Hans":"中文（简体）", "zho_Hant":"中文（繁體）", "jpn_Jpan":"日本語", "kor_Hang":"한국어",
+    "jpn_Jpan":"日本語", 
+    "zho_Hans":"中文（简体）", 
+    "zho_Hant":"中文（繁體）", 
+    "kor_Hang":"한국어",
     "khk_Cyrl":"Монгол",
     # Afrique
     "swh_Latn":"Kiswahili", "amh_Ethi":"አማርኛ", "som_Latn":"Af-Soomaali",
@@ -100,7 +110,7 @@ class InterfaceRenPyTranslator:
     def __init__(self, root):
         self.root = root
         self.root.title(APP_TITLE)
-        self.root.geometry("600x540")
+        self.root.geometry("600x550")
         
         self.config_file = "config.json"
 
@@ -185,9 +195,9 @@ class InterfaceRenPyTranslator:
         2. Le premier autre modèle trouvé dans le dossier ./models.
         3. L'identifiant Hugging Face comme solution de repli.
         """
-        specific_local_model = "./models/hub/models--virusf--nllb-renpy-rory-v3"
+        specific_local_model = "./models/hub/models--virusf--nllb-renpy-rory-v4"
         models_dir = "./models"
-        hf_repo_id = "virusf/nllb-renpy-rory-v3"
+        hf_repo_id = "virusf/nllb-renpy-rory-v4"
 
         if os.path.isdir(specific_local_model):
             print(f"Modèle par défaut local trouvé : {specific_local_model}")
@@ -491,7 +501,7 @@ class InterfaceRenPyTranslator:
 
         if not modele or (not os.path.isdir(modele) and not _is_hf_repo_id(modele)):
             messagebox.showwarning("Chemin du modèle",
-                "Indique un dossier local (ex: ./models/nllb) ou un ID HF (ex: virusf/nllb-renpy-rory-v3).")
+                "Indique un dossier local (ex: ./models/nllb) ou un ID HF (ex: virusf/nllb-renpy-rory-v4).")
             return
 
         self._stop_flag = False
@@ -534,20 +544,26 @@ class InterfaceRenPyTranslator:
 
             try:
                 stop_evt = threading.Event()
-                def _hb():
-                    # Heartbeat log every 3s while the heavy init runs
-                    while not stop_evt.wait(10.0):
-                        print("   ⏳ Toujours en cours de chargement du modèle…", flush=True)
-                hb_thread = threading.Thread(target=_hb, daemon=True)
-                hb_thread.start()
+                # Activer heartbeat uniquement si ce n'est PAS un repo HF (donc modèle local déjà dispo)
+                if not _is_hf_repo_id(modele):
+                    def _hb():
+                        while not stop_evt.wait(10.0):
+                            print("   ⏳ Toujours en cours de chargement du modèle…", flush=True)
+                    hb_thread = threading.Thread(target=_hb, daemon=True)
+                    hb_thread.start()
+                else:
+                    hb_thread = None  # Pas de heartbeat en cas de téléchargement HF
+
                 try:
                     traducteur = TraducteurRenPy(modele, src_lang=src_lang, tgt_lang=tgt_lang)
                 finally:
                     stop_evt.set()
-                    try:
-                        hb_thread.join(timeout=0.1)
-                    except Exception:
-                        pass
+                    if hb_thread:
+                        try:
+                            hb_thread.join(timeout=0.1)
+                        except Exception:
+                            pass
+
                 # try:
                 #     setattr(traducteur, "auto_install_languagetool", False)
                 # except Exception:
