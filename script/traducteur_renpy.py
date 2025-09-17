@@ -23,6 +23,13 @@ warnings.filterwarnings(
 import torch
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
+### CHANGEMENT 1: Importer PeftModel ###
+try:
+    from peft import PeftModel
+except ImportError:
+    print("⚠️  La bibliothèque 'peft' n'est pas installée. Le chargement de LoRA est désactivé. Faites 'pip install peft' pour l'activer.")
+    PeftModel = None
+### FIN CHANGEMENT 1 ###
 
 # --- Langdetect (auto-install soft) ---
 try:
@@ -151,7 +158,7 @@ def _try(x, fn, default=None):
         return default
 
 class TraducteurRenPy:
-    def __init__(self, model_path, src_lang: str = "eng_Latn", tgt_lang: str = "fra_Latn"):
+    def __init__(self, model_path, src_lang: str = "eng_Latn", tgt_lang: str = "fra_Latn", lora_path: Optional[str] = None):
         # Perf knobs globaux
         try:
             torch.set_float32_matmul_precision("high")  # TF32
@@ -174,9 +181,30 @@ class TraducteurRenPy:
         print("   ⏳ Préparation (détection repo/local)...", flush=True)
         is_repo = isinstance(model_path, str) and re.match(r"^[\w.-]+/[\w.-]+$", model_path or "")
         print(f"   📦 Source: {'HuggingFace' if is_repo else 'Local files'}", flush=True)
-        print("   ⏳ Téléchargement/lecture du modèle...", flush=True)
-        self.model = AutoModelForSeq2SeqLM.from_pretrained(model_path, local_files_only=not is_repo)
-        print(f"   ✅ Modèle chargé ({time.time()-t_load0:.1f}s)", flush=True)
+
+
+        ### CHANGEMENT 3: Logique de chargement du modèle et du LoRA ###
+        print("   ⏳ Téléchargement/lecture du modèle de base...", flush=True)
+        base_model = AutoModelForSeq2SeqLM.from_pretrained(model_path, local_files_only=not is_repo)
+        
+        if lora_path and PeftModel:
+            print(f"   🎨 Application du LoRA depuis : {lora_path}", flush=True)
+            try:
+                is_lora_repo = isinstance(lora_path, str) and re.match(r"^[\w.-]+/[\w.-]+$", lora_path or "")
+                self.model = PeftModel.from_pretrained(base_model, lora_path, local_files_only=not is_lora_repo)
+                print("   ✅ LoRA appliqué avec succès.", flush=True)
+            except Exception as e:
+                print(f"❌ Échec de l'application du LoRA : {e}", flush=True)
+                print("   -> Utilisation du modèle de base seul.", flush=True)
+                self.model = base_model
+        else:
+            self.model = base_model
+        ### FIN CHANGEMENT 3 ###
+
+
+        # print("   ⏳ Téléchargement/lecture du modèle...", flush=True)
+        # self.model = AutoModelForSeq2SeqLM.from_pretrained(model_path, local_files_only=not is_repo)
+        # print(f"   ✅ Modèle chargé ({time.time()-t_load0:.1f}s)", flush=True)
 
         print("   ⏳ Chargement du tokenizer (rapide si déjà en cache)...", flush=True)
         try:
@@ -278,9 +306,22 @@ class TraducteurRenPy:
             pass
         return None
 
+    # def _make_gen_kwargs(self):
+    #     kw = dict(
+    #         max_new_tokens=64,
+    #         num_beams=CONFIG.get("NUM_BEAMS", 1),
+    #         do_sample=False,
+    #         use_cache=True,
+    #     )
+    #     if not self._prefix_mode and self._tgt_lang_id is not None:
+    #         kw["forced_bos_token_id"] = self._tgt_lang_id
+    #     if getattr(self.tokenizer, "pad_token_id", None) is not None:
+    #         kw["pad_token_id"] = self.tokenizer.pad_token_id
+    #     return kw
+
     def _make_gen_kwargs(self):
         kw = dict(
-            max_new_tokens=64,
+            max_new_tokens=256,  # ⬅️ augmenter la marge (64 → 256)
             num_beams=CONFIG.get("NUM_BEAMS", 1),
             do_sample=False,
             use_cache=True,
@@ -290,6 +331,7 @@ class TraducteurRenPy:
         if getattr(self.tokenizer, "pad_token_id", None) is not None:
             kw["pad_token_id"] = self.tokenizer.pad_token_id
         return kw
+
 
     # encodage sûr
     def _encode_with_safe_len(self, texts: List[str]):

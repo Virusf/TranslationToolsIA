@@ -166,9 +166,12 @@ class InterfaceRenPyTranslator:
         # State
         self.dossier_jeu = tk.StringVar()
         self.model_path = tk.StringVar(value=self.get_default_model_path())
+        ### CHANGEMENT 1: Ajouter la variable pour le LoRA ###
+        self.lora_path = tk.StringVar(value="")
+        ### FIN CHANGEMENT 1 ###
         self.dossier_sortie = tk.StringVar(value="")
         self.recursif = tk.BooleanVar(value=True)
-        self._worker = None
+        self._worker = None  # <-- On laisse juste cette ligne
         self._stop_flag = False
         self.src_lang = tk.StringVar(value="auto")
         self.tgt_lang = tk.StringVar(value="fra_Latn")
@@ -222,6 +225,9 @@ class InterfaceRenPyTranslator:
         settings = {
             "dossier_jeu": "",
             "model_path": self.model_path.get(),
+            ### CHANGEMENT 2: Sauvegarder le LoRA ###
+            "lora_path": self.lora_path.get(),
+            ### FIN CHANGEMENT 2 ###
             "dossier_sortie": self.dossier_sortie.get(),
             "recursif": self.recursif.get(),
             "src_lang": self.src_lang.get(),
@@ -245,6 +251,9 @@ class InterfaceRenPyTranslator:
 
             # Charger tous les autres paramètres
             self.dossier_jeu.set(settings.get("dossier_jeu", ""))
+            ### CHANGEMENT 3: Charger le LoRA ###
+            self.lora_path.set(settings.get("lora_path", ""))
+            ### FIN CHANGEMENT 3 ###
             self.dossier_sortie.set(settings.get("dossier_sortie", ""))
             self.recursif.set(settings.get("recursif", True))
             self.src_lang.set(settings.get("src_lang", "auto"))
@@ -290,6 +299,16 @@ class InterfaceRenPyTranslator:
         tk.Label(frame_model, text="Model path :").pack(side="left")
         tk.Entry(frame_model, textvariable=self.model_path, width=72).pack(side="left", padx=5)
         tk.Button(frame_model, text="Browse", command=self.choisir_modele, **self.button_style).pack(side="left")
+
+
+        ### CHANGEMENT 4: Ajouter le champ pour le LoRA ###
+        # frame_lora = tk.Frame(self.root)
+        # frame_lora.pack(fill="x", padx=10, pady=(0, 5))
+        # tk.Label(frame_lora, text="LoRA path (optional):").pack(side="left")
+        # tk.Entry(frame_lora, textvariable=self.lora_path, width=65).pack(side="left", padx=5)
+        # tk.Button(frame_lora, text="Browse", command=self.choisir_lora, **self.button_style).pack(side="left")
+        ### FIN CHANGEMENT 4 ###
+
 
         # 5) Langues (avec autodétection + ligne source/cible)
         frame_lang = tk.Frame(self.root)
@@ -476,6 +495,14 @@ class InterfaceRenPyTranslator:
         if path:
             self.batch_log_path.set(path)
 
+
+    ### CHANGEMENT 5: Ajouter la fonction pour choisir un dossier LoRA ###
+    def choisir_lora(self):
+        d = filedialog.askdirectory()
+        if d: self.lora_path.set(d)
+    ### FIN CHANGEMENT 5 ###
+
+
     def lancer_traduction(self):
         if getattr(self, '_worker', None) and self._worker.is_alive():
             messagebox.showinfo("Patiente", "Une traduction est déjà en cours.")
@@ -486,6 +513,9 @@ class InterfaceRenPyTranslator:
         
         chemin = self.dossier_jeu.get().strip()
         modele = self.model_path.get().strip()
+        ### CHANGEMENT 6: Récupérer le chemin du LoRA ###
+        lora = self.lora_path.get().strip()
+        ### FIN CHANGEMENT 6 ###
         sortie = self.dossier_sortie.get().strip()
         recurse = self.recursif.get()
         src = self.src_lang.get().strip()
@@ -505,14 +535,15 @@ class InterfaceRenPyTranslator:
             return
 
         self._stop_flag = False
+        # C'EST ICI LA BONNE LIGNE À MODIFIER
         self._worker = threading.Thread(
             target=self._job_traduction, 
-            args=(chemin, modele, sortie, recurse, src, tgt),
+            args=(chemin, modele, sortie, recurse, src, tgt, lora), # <-- On ajoute 'lora' ici
             daemon=True
         )
         self._worker.start()
 
-    def _job_traduction(self, chemin, modele, sortie, recurse, src_lang, tgt_lang):
+    def _job_traduction(self, chemin, modele, sortie, recurse, src_lang, tgt_lang, lora_path):
         ui_writer = _TextBoxWriter(self._log_queue)
         self._old_out, self._old_err = sys.stdout, sys.stderr
         sys.stdout = _TeeStream(self._old_out, ui_writer)
@@ -521,6 +552,12 @@ class InterfaceRenPyTranslator:
         try:
             print(f"📁 Folder : {chemin}")
             print(f"🧠 Model : {modele}")
+
+            ### CHANGEMENT 9: Afficher le LoRA s'il est utilisé ###
+            if lora_path:
+                print(f"   + LoRA: {lora_path}")
+            ### FIN CHANGEMENT 9 ###
+
             print(f"🌐 Languages : {src_lang} → {tgt_lang}")
             print("📂 Mode :", "Recursive" if recurse else "This folder only")
             if sortie:
@@ -555,7 +592,12 @@ class InterfaceRenPyTranslator:
                     hb_thread = None  # Pas de heartbeat en cas de téléchargement HF
 
                 try:
-                    traducteur = TraducteurRenPy(modele, src_lang=src_lang, tgt_lang=tgt_lang)
+                    traducteur = TraducteurRenPy(
+                        modele,
+                        src_lang=src_lang,
+                        tgt_lang=tgt_lang,
+                        lora_path=lora_path if lora_path else None
+                    )
                 finally:
                     stop_evt.set()
                     if hb_thread:

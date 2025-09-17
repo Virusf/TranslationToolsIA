@@ -135,14 +135,20 @@ class TraducteurRenPy(CoreTraducteur):
     # ==========================
     def _split_text_to_safe_chunks(self, text: str) -> List[str]:
         text = text or ""
-        if not text:
+        if not text.strip():
             return [""]
+
         SAFE = self._safe_input_len()
-        if len(text) <= 180:
+
+        # ✅ Autoriser jusqu'à 400 caractères sans découper
+        if len(text) <= 400:
             return [text]
+
+        # ✅ Si ça rentre dans le tokenizer → pas de découpe
         if self._tok_len(text) <= SAFE:
             return [text]
 
+        # ⚠️ Sinon, fallback découpage intelligent
         parts = re.split(r'(?<=[.!?…])\s+', text)
         chunks: List[str] = []
         cur = ""
@@ -159,9 +165,9 @@ class TraducteurRenPy(CoreTraducteur):
                 cur = proposal
         if cur:
             chunks.append(cur)
-        if chunks:
-            return chunks
-        return self._split_greedy_by_words(text, SAFE)
+        return chunks or [text]
+
+
 
     def _split_greedy_by_words(self, s: str, SAFE: int) -> List[str]:
         words = s.split()
