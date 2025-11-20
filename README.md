@@ -9,7 +9,7 @@ La compatibilité complète sera disponible dès la prochaine version de cet out
 Le traducteur utilise les modèles de la série [`virusf/nllb-renpy-rory-vx`](https://huggingface.co/virusf).  
 👉 Pensez à vérifier régulièrement les **nouvelles versions** (v5, v6, …) afin de bénéficier :  
 - d’un meilleur vocabulaire sur les dialogues VN  
-- de corrections de pré-traitement ([RenExtract](https://github.com/Virusf/TranslationToolsIA/archive/refs/heads/main.zip](https://github.com/Rory-Mercury-91/RenExtract))
+- de corrections de pré-traitement ([RenExtract](https://github.com/Rory-Mercury-91/RenExtract))
 - d’améliorations de qualité de traduction
 
 ---
