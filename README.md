@@ -34,7 +34,7 @@ lance simplement : Lancement.bat
 
 1. **Folder of files to translate** → choisir le dossier du jeu Ren’Py.  
 2. **Browse subfolders recursively** → cocher si tu veux inclure aussi les sous-dossiers.  
-3. **Model path** → chemin du modèle (dossier local `./models/...` ou identifiant Hugging Face `virusf/nllb-renpy-rory-v4`).  
+3. **Model path** → chemin du modèle (dossier local `./models/...` ou identifiant Hugging Face `virusf/nllb-renpy-rory-v6`).  
 4. **Languages** → configurer :  
    - `Source language (NLLB code)` (ou laisser l’option **Automatically detect source language** activée).  
    - `Target` (`fra_Latn` par défaut pour français).  
@@ -53,7 +53,7 @@ lance simplement : Lancement.bat
 - Détection automatique de la **langue source** (optionnelle).
 - Sélection du modèle :
   - dossier local (`./script/models/...`)  
-  - ou repo Hugging Face (`virusf/nllb-renpy-rory-v3` par défaut).
+  - ou repo Hugging Face (`virusf/nllb-renpy-rory-v6` par défaut).
 - Gestion VRAM optimisée (FP16, TF32, batch adaptatif).
 - Protection des **tokens Ren'Py** (`RENPY_CODE_...`, `{color=}`, `{size=}`, etc.).
 - Sauvegarde automatique des préférences dans `config.json`.
