@@ -198,9 +198,9 @@ class InterfaceRenPyTranslator:
         2. Le premier autre modèle trouvé dans le dossier ./models.
         3. L'identifiant Hugging Face comme solution de repli.
         """
-        specific_local_model = "./models/hub/models--virusf--nllb-renpy-rory-v4"
+        specific_local_model = "./models/hub/models--virusf--nllb-renpy-rory-v6"
         models_dir = "./models"
-        hf_repo_id = "virusf/nllb-renpy-rory-v4"
+        hf_repo_id = "virusf/nllb-renpy-rory-v6"
 
         if os.path.isdir(specific_local_model):
             print(f"Modèle par défaut local trouvé : {specific_local_model}")
@@ -531,7 +531,7 @@ class InterfaceRenPyTranslator:
 
         if not modele or (not os.path.isdir(modele) and not _is_hf_repo_id(modele)):
             messagebox.showwarning("Chemin du modèle",
-                "Indique un dossier local (ex: ./models/nllb) ou un ID HF (ex: virusf/nllb-renpy-rory-v4).")
+                "Indique un dossier local (ex: ./models/nllb) ou un ID HF (ex: virusf/nllb-renpy-rory-v6).")
             return
 
         self._stop_flag = False
