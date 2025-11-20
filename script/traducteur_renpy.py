@@ -161,7 +161,9 @@ class TraducteurRenPy:
     def __init__(self, model_path, src_lang: str = "eng_Latn", tgt_lang: str = "fra_Latn", lora_path: Optional[str] = None):
         # Perf knobs globaux
         try:
-            torch.set_float32_matmul_precision("high")  # TF32
+            torch.backends.cudnn.conv.fp32_precision = 'tf32'
+            torch.backends.cuda.matmul.fp32_precision = 'tf32'
+            # torch.set_float32_matmul_precision("high")  # TF32
         except Exception:
             pass
 
